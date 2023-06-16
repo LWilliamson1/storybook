@@ -1,7 +1,7 @@
 /* eslint-disable import/no-cycle */
 import { useStorybookApi, shortcutToHumanString } from '@storybook/manager-api';
 import { styled } from '@storybook/theming';
-import { Icons } from '@storybook/components';
+import { Button, IconButton, Icons, TabBar, TabButton } from '@storybook/components';
 import type { DownshiftState, StateChangeOptions } from 'downshift';
 import Downshift from 'downshift';
 import type { FuseOptions } from 'fuse.js';
@@ -41,6 +41,21 @@ const options = {
     { name: 'name', weight: 0.7 },
     { name: 'path', weight: 0.3 },
   ],
+} as FuseOptions<SearchItem>;
+
+const tagsOptions = {
+  ...options,
+  distance: 0,
+  minMatchCharLength: 2,
+  // useExtendedSearch: true,
+  keys: ['tags'],
+} as FuseOptions<SearchItem>;
+
+const childrenOptions = {
+  ...options,
+  keys: ['children'],
+  useExtendedSearch: true,
+  distance: 0,
 } as FuseOptions<SearchItem>;
 
 const ScreenReaderLabel = styled.label({
@@ -165,6 +180,7 @@ export const Search = React.memo<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputPlaceholder, setPlaceholder] = useState('Find components');
   const [allComponents, showAllComponents] = useState(false);
+  const [isTagSearchActive, setIsTagSearchActive] = useState(false);
   const searchShortcut = api ? shortcutToHumanString(api.getShortcutKeys().search) : '/';
 
   const selectStory = useCallback(
@@ -186,14 +202,43 @@ export const Search = React.memo<{
   }, [dataset]);
 
   const fuse = useMemo(() => new Fuse(list, options), [list]);
+  const tagsFuse = useMemo(() => new Fuse(list, tagsOptions), [list]);
+  const childFuse = useMemo(() => new Fuse(list, childrenOptions), [list]);
 
   const getResults = useCallback(
     (input: string) => {
       if (!input) return [];
+      let searchResults;
+      if (!isTagSearchActive) {
+        searchResults = fuse.search(input);
+      } else {
+        const tagResults = tagsFuse.search(input).filter((obj) => {
+          return obj.matches.length > 0 && obj.score < 0.0001;
+        }) as SearchResult[];
+
+        if (!tagResults[0]?.matches.length) return [];
+
+        const temp: SearchResult[] = [];
+        console.log(tagResults);
+        (tagResults as SearchResult[]).forEach(({ item }) => {
+          const parent = childFuse.search(`'${item.parent}$`)[0];
+          if (!parent) return;
+          if (
+            !(temp as SearchResult[]).find((obj) => {
+              return obj.item.id === parent.item.id;
+            })
+          )
+            temp.push(parent as SearchResult);
+        });
+        searchResults = temp;
+
+        if (!searchResults.length) return [];
+      }
 
       let results: DownshiftItem[] = [];
       const resultIds: Set<string> = new Set();
-      const distinctResults = (fuse.search(input) as SearchResult[]).filter(({ item }) => {
+
+      const distinctResults = (searchResults as SearchResult[]).filter(({ item }) => {
         if (
           !(item.type === 'component' || item.type === 'docs' || item.type === 'story') ||
           resultIds.has(item.parent)
@@ -216,7 +261,7 @@ export const Search = React.memo<{
 
       return results;
     },
-    [allComponents, fuse]
+    [allComponents, fuse, tagsFuse, isTagSearchActive]
   );
 
   const stateReducer = useCallback(
@@ -358,7 +403,22 @@ export const Search = React.memo<{
               {enableShortcuts && <FocusKey>{searchShortcut}</FocusKey>}
               <ClearIcon icon="cross" onClick={() => clearSelection()} />
             </SearchField>
+
             <FocusContainer tabIndex={0} id="storybook-explorer-menu">
+              {isOpen && (
+                <IconButton
+                  // style={{ marginBottom: isTagSearchActive && '0.5rem' }}
+                  title="Tags"
+                  active={isTagSearchActive}
+                  onClick={(e: MouseEvent) => {
+                    e.preventDefault();
+                    setIsTagSearchActive(!isTagSearchActive);
+                  }}
+                >
+                  Tags
+                </IconButton>
+              )}
+
               {children({
                 query: input,
                 results,

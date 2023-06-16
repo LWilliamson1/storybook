@@ -7,6 +7,7 @@ import { Form } from '../form/index';
 
 export default {
   component: Button,
+  tags: ['test2'],
 };
 
 export const Default = { args: { children: 'Default' } };

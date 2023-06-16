@@ -21,6 +21,7 @@ const ResultsList = styled.ol({
   margin: 0,
   marginLeft: -20,
   marginRight: -20,
+  marginTop: 8,
   padding: 0,
 });
 
