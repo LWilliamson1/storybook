@@ -1,7 +1,7 @@
 /* eslint-disable import/no-cycle */
 import { useStorybookApi, shortcutToHumanString } from '@storybook/manager-api';
 import { styled } from '@storybook/theming';
-import { Button, IconButton, Icons, TabBar, TabButton } from '@storybook/components';
+import { IconButton, Icons } from '@storybook/components';
 import type { DownshiftState, StateChangeOptions } from 'downshift';
 import Downshift from 'downshift';
 import type { FuseOptions } from 'fuse.js';
@@ -404,7 +404,6 @@ export const Search = React.memo<{
             <FocusContainer tabIndex={0} id="storybook-explorer-menu">
               {isOpen && (
                 <IconButton
-                  // style={{ marginBottom: isTagSearchActive && '0.5rem' }}
                   title="Tags"
                   active={isTagSearchActive}
                   onClick={(e: MouseEvent) => {
