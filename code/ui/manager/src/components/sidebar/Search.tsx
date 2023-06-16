@@ -45,7 +45,6 @@ const options = {
 
 const tagsOptions = {
   ...options,
-  distance: 0,
   minMatchCharLength: 2,
   // useExtendedSearch: true,
   keys: ['tags'],
@@ -212,14 +211,12 @@ export const Search = React.memo<{
       if (!isTagSearchActive) {
         searchResults = fuse.search(input);
       } else {
-        const tagResults = tagsFuse.search(input).filter((obj) => {
-          return obj.matches.length > 0 && obj.score < 0.0001;
-        }) as SearchResult[];
+        if (input.length < 2) return [];
+        const tagResults = tagsFuse.search(input);
 
         if (!tagResults[0]?.matches.length) return [];
 
         const temp: SearchResult[] = [];
-        console.log(tagResults);
         (tagResults as SearchResult[]).forEach(({ item }) => {
           const parent = childFuse.search(`'${item.parent}$`)[0];
           if (!parent) return;
